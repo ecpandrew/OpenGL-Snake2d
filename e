@@ -4,7 +4,7 @@ clear
 echo "------- script start ------"
 echo "running main.cpp"
 
-g++ /home/andrew/cgraf/p3/main.cpp -o teste -lGL -lGLU -lglut
+g++ /home/andrew/cgraf/p3/wener.cpp -o teste -lGL -lGLU -lGLEW -lglut -lSOIL 
 
 (exec "/home/andrew/cgraf/p3/teste")
 
