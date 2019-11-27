@@ -1,6 +1,6 @@
 #include <GL/freeglut.h>
 #include <stdio.h>
-#include <string>
+#include <sstream>
 
 //Para maiores informações, ver documentação
 //http://docs.gl/gl3/
@@ -54,13 +54,14 @@ int CobraUnit::getSize()
 
 CobraUnit generateCobraUnit(int x, int y);
 static int size_default = 10;
-static int step = 10;
+static int step = 12;
 static bool ENDGAME = false;
 GLuint texid1;
 
 CobraUnit generateCobraUnit(int x, int y)
 {
     CobraUnit auxcobra;
+
     auxcobra.setPosicaoX(x);
     auxcobra.setPosicaoY(y);
     auxcobra.setSize(size_default);
@@ -93,14 +94,55 @@ static int head_y = 250;
 static int food_x = rand() % 498 + 1;
 static int food_y = rand() % 498 + 1;
 
+static int poison_x = rand() % 498 + 1;
+static int poison_y = rand() % 498 + 1;
+
 static int big_food_x = rand() % 498 + 1;
 static int big_food_y = rand() % 498 + 1;
 
 static int LEVEL = 1;
-static int DELAY = 30;
+static int DELAY = 40;
+
+static int iCHILD = 10;
+static int iWALLS = 15;
+static int iPOISON = 20;
+static int iSPEED1 = 25;
+static int iSPEED2 = 30;
+static int iSPEED3 = 35;
+static int iINSANE = 40;
+
+int module(int valor);
+int module(int valor)
+{
+    if (valor < 0)
+    {
+        return -valor;
+    }
+    else
+    {
+        return valor;
+    }
+}
+
+typedef enum
+{
+    CHILD,
+    WALLS,
+    POISON,
+    SPEED1,
+    SPEED2,
+    SPEED3,
+    INSANE
+
+} Stage;
+
+static Stage STAGE;
+
+char stage[20];
 
 static bool IS_THERE_FOOD = true;
 static bool IS_THERE_BIG_FOOD = true;
+static bool DIRECTION_CHANGED = false;
 
 static bool LEFT = false;
 static bool RIGHT = false;
@@ -110,10 +152,8 @@ static bool DOWN = false;
 static float r = 1;
 static float g = 0;
 static float b = 0;
-float angulo = 0.0f, rotX = 1.0, rotY = 0.0f, rotZ = 0.0f, velocidade = -1.00;
-// int w, h, window, fim = 0;
 
-static CobraUnit head = generateCobraUnit(head_x, head_y);
+// static CobraUnit head = generateCobraUnit(head_x, head_y);
 // static CobraUnit body1 = generateCobraUnit(250 + 10, 250);
 // static CobraUnit body2 = generateCobraUnit(250 + 20, 250);
 // static CobraUnit body3 = generateCobraUnit(250 + 30, 250);
@@ -122,6 +162,8 @@ static CobraUnit head = generateCobraUnit(head_x, head_y);
 static CobraUnit cobra[2500]; // = {head, body1, body2, body3, body4, body5};
 
 // void mouse(int button, int state, int x, int y);
+void desenhaTextoBmp(int x, int y, void *fonte, char *string);
+
 void addUnitToCobra();
 
 void addUnitToCobra()
@@ -136,6 +178,38 @@ void addUnitToCobra()
 
     // }
     LEVEL++;
+    if (LEVEL == 2)
+    {
+        STAGE = CHILD;
+    }
+    else if (LEVEL == iWALLS)
+    {
+        STAGE = WALLS;
+    }
+    else if (LEVEL == iPOISON)
+    {
+        STAGE = POISON;
+    }
+    else if (LEVEL == iSPEED1)
+    {
+        STAGE = SPEED1;
+        DELAY = 35;
+    }
+    else if (LEVEL == iSPEED2)
+    {
+        STAGE = SPEED2;
+        DELAY = 30;
+    }
+    else if (LEVEL == iSPEED3)
+    {
+        STAGE = SPEED3;
+        DELAY = 25;
+    }
+    else if (LEVEL > iINSANE)
+    {
+        STAGE = INSANE;
+        DELAY = 23;
+    }
 }
 void keyboard(unsigned char key, int x, int y);
 void SpecialKeys(int key, int x, int y);
@@ -150,28 +224,62 @@ void stopGame()
     head_x = 250;
     head_y = 250;
     LEVEL = 1;
+    STAGE = CHILD;
+    DELAY = 40;
 }
 void wallColision()
 {
     if (head_x >= 500) // direita
     {
-        head_x = 0;
-        // stopGame();
+
+        if (LEVEL > iWALLS)
+        {
+            stopGame();
+            printf("wall 1");
+        }
+        else
+        {
+            head_x = 0;
+        }
     }
     else if (head_x + 10 <= 0) // direita
     {
-        head_x = 500;
+        if (LEVEL >= iWALLS)
+        {
+            stopGame();
+            printf("wall 2");
+        }
+        else
+        {
+            head_x = 500;
+        }
         // stopGame();
     }
 
     if (head_y >= 500)
     {
-        head_y = 0;
+        if (LEVEL >= iWALLS)
+        {
+            stopGame();
+            printf("wall 3");
+        }
+        else
+        {
+            head_y = 0;
+        }
         // stopGame();
     }
     else if (head_y + 10 <= 0)
     {
-        head_y = 500;
+        if (LEVEL >= iWALLS)
+        {
+            stopGame();
+            printf("wall 4");
+        }
+        else
+        {
+            head_y = 500 - 10;
+        }
         // stopGame();
     }
 }
@@ -181,22 +289,12 @@ void drawFood()
 
     glColor3f(1, 0, 0);
     glRecti(food_x, food_y, food_x + 10, food_y + 10);
+    if (LEVEL >= iPOISON)
+    {
 
-    // if (!IS_THERE_BIG_FOOD)
-    // {
-    //     int i = rand() % 100 + 1;
-
-    //     if (0 < i < 50)
-    //     {
-    //         big_food_x = rand() % 497;
-    //         big_food_y = rand() % 497;
-    //         glColor3f(0, 1, 0);
-
-    //         glRecti(big_food_x, big_food_y, big_food_x + 20, big_food_y + 20);
-    //     }
-    // }
-
-    // glFlush();
+        glColor3f(1, 0, 1);
+        glRecti(poison_x, poison_y, poison_x + 10, poison_y + 10);
+    }
 }
 
 void cobraColision()
@@ -210,19 +308,13 @@ void cobraColision()
 
         bool collisionX = head_x + size_default >= aux_x &&
                           aux_x + size_default >= head_x;
-        // Collision y-axis?
         bool collisionY = head_y + size_default >= aux_y &&
                           aux_y + size_default >= head_y;
 
-        //     bool collisionX = head_x + size_default >= food_x &&
-        //                   food_x + size_default >= head_x;
-        // // Collision y-axis?
-        //     bool collisionY = head_y + size_default >= food_y &&
-        //                   food_y + size_default >= head_y;
-
-        if (collisionX && collisionY)
+        if (collisionX && collisionY && i > 2)
         { // colision
             stopGame();
+            printf("cobra colision");
         }
     }
 }
@@ -234,28 +326,33 @@ void foodColision()
     {
         food_x = rand() % 497;
         food_y = rand() % 497;
+        bool t = true;
+        while (t)
+        {
+            poison_x = rand() % 497;
+            poison_y = rand() % 497;
+
+            if ((module(head_x - poison_x) > 35 && module(head_y - poison_y) > 35))
+            //  && (module(food_x - poison_x) > 10 && module(food_y - poison_y) > 10))
+            {
+                t = false;
+            }
+        }
+
         IS_THERE_FOOD = true;
     }
-    // if (!IS_THERE_BIG_FOOD)
-    // {
-    //     big_food_x = rand() % 497;
-    //     big_food_y = rand() % 497;
-    //     IS_THERE_BIG_FOOD = true;
-    // }
 
-    // two = food
-    //one = cobra;
     bool collisionX = head_x + size_default >= food_x &&
                       food_x + size_default >= head_x;
     // Collision y-axis?
     bool collisionY = head_y + size_default >= food_y &&
                       food_y + size_default >= head_y;
 
-    // bool bigCollisionX = head_x + size_default >= big_food_x &&
-    //                      big_food_x + size_default >= head_x;
-    // // Collision y-axis?
-    // bool bigCollisionY = head_y + size_default >= big_food_y &&
-    //                      big_food_y + size_default >= head_y;
+    bool poisonCollisionX = head_x + size_default >= poison_x &&
+                            poison_x + size_default >= head_x;
+    // Collision y-axis?
+    bool poisonCollisionY = head_y + size_default >= poison_y &&
+                            poison_y + size_default >= head_y;
 
     if (collisionX && collisionY)
     { // colision
@@ -264,33 +361,22 @@ void foodColision()
         addUnitToCobra();
         IS_THERE_FOOD = false;
     }
-    // if (bigCollisionX && bigCollisionY)
-    // { // colision
-    //     printf("\nFOOD ATED\n");
-
-    //     addUnitToCobra();
-    //     addUnitToCobra();
-    //     addUnitToCobra();
-    //     IS_THERE_BIG_FOOD = false;
-    // }
+    if (poisonCollisionX && poisonCollisionY)
+    { // colision
+        stopGame();
+        printf("poison colision");
+    }
 }
 
 void handleColision()
 {
     foodColision();
     wallColision();
-    // cobraColision();
+    cobraColision();
 }
 void drawCobra()
 {
-    // paredes
-    // glBegin(GL_LINE_STRIP);
-    // glVertex2i(0, 0);
-    // glVertex2i(0, 500);
-    // glVertex2i(500, 500);
-    // glVertex2i(500, 0);
-    // glVertex2i(0, 0);
-    // glEnd();
+
     int i, j = 0;
 
     for (i = 0; i < LEVEL; i++)
@@ -298,7 +384,9 @@ void drawCobra()
 
         int x = cobra[i].getPosicaoX();
         int y = cobra[i].getPosicaoY();
+
         int s = cobra[i].getSize();
+
         glColor3f(0, 0, 0);
 
         glRecti(x, y, x + s, y + s);
@@ -317,18 +405,22 @@ void cobraCounter(int value)
     if (LEFT)
     {
         head_x -= step;
+        DIRECTION_CHANGED = false;
     }
     else if (RIGHT)
     {
         head_x += step;
+        DIRECTION_CHANGED = false;
     }
     else if (UP)
     {
         head_y += step;
+        DIRECTION_CHANGED = false;
     }
     else if (DOWN)
     {
         head_y -= step;
+        DIRECTION_CHANGED = false;
     }
     if (LEVEL == 1)
     {
@@ -428,11 +520,6 @@ void display(void)
     glClear(GL_COLOR_BUFFER_BIT);
     glLoadIdentity();
 
-    // gluLookAt(0.0f, 0.0f, 10.0f,
-    //           0.0f, 0.0f, 0.0f,
-    //           0.0f, 1.0f, 0.0f);
-
-    // glRotatef(angulo, rotX, rotY, rotZ);
     glColor3f(1, 1, 1);
     glBegin(GL_QUADS);
     glTexCoord3f(0, 0, 0);
@@ -451,6 +538,63 @@ void display(void)
     drawFood();
     drawCobra();
     // glFlush();
+
+    // String::number("%1", levelString);
+    // levelString = (char *)"Level: " + char(LEVEL);
+
+    char str[10];
+    sprintf(str, "%d", LEVEL - 1);
+    desenhaTextoBmp(10, 530, GLUT_BITMAP_TIMES_ROMAN_24, (char *)"Level: ");
+    desenhaTextoBmp(85, 530, GLUT_BITMAP_TIMES_ROMAN_24, str);
+
+    desenhaTextoBmp(250, 530, GLUT_BITMAP_TIMES_ROMAN_24, (char *)"Stage: ");
+
+    if (LEVEL >= iWALLS)
+    {
+        glColor3f(0, 0, 1);
+        glBegin(GL_LINE_STRIP);
+        glVertex2i(1, 1);
+        glVertex2i(1, 499);
+        glVertex2i(500, 499);
+        glVertex2i(500, 1);
+        glVertex2i(1, 1);
+        glEnd();
+    }
+    switch (STAGE)
+    {
+    case CHILD:
+        glColor3f(0, 0, 0);
+        desenhaTextoBmp(320, 530, GLUT_BITMAP_TIMES_ROMAN_24, (char *)"CHILD");
+        break;
+    case WALLS:
+        glColor3f(0, 0, 0);
+        desenhaTextoBmp(320, 530, GLUT_BITMAP_TIMES_ROMAN_24, (char *)"WALLS");
+        break;
+    case POISON:
+        glColor3f(0, 0, 0);
+        desenhaTextoBmp(320, 530, GLUT_BITMAP_TIMES_ROMAN_24, (char *)"POISON");
+        break;
+    case SPEED1:
+        glColor3f(0, 0, 0);
+        desenhaTextoBmp(320, 530, GLUT_BITMAP_TIMES_ROMAN_24, (char *)"SPEED1");
+        break;
+    case SPEED2:
+        glColor3f(0, 0, 0);
+        desenhaTextoBmp(320, 530, GLUT_BITMAP_TIMES_ROMAN_24, (char *)"SPEED2");
+        break;
+    case SPEED3:
+        glColor3f(0, 0, 0);
+        desenhaTextoBmp(320, 530, GLUT_BITMAP_TIMES_ROMAN_24, (char *)"SPEED3");
+        break;
+    case INSANE:
+        glColor3f(0, 0, 0);
+        desenhaTextoBmp(320, 530, GLUT_BITMAP_TIMES_ROMAN_24, (char *)"INSANE");
+        break;
+
+    default:
+        break;
+    }
+
     glutSwapBuffers();
 }
 
@@ -461,7 +605,7 @@ void reshape(int w, int h)
     glLoadIdentity();
     // glOrtho(-50.0, 50.0, -50.0, 50.0 , -1.0, 1.0);
 
-    glOrtho(0, 500, 0, 500, -1, 1);
+    glOrtho(0, 500, 0, 560, -1, 1);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 }
@@ -489,28 +633,6 @@ void keyboard(unsigned char key, int x, int y)
         UP = false;
         DOWN = false;
         break;
-
-    case ' ':
-    {
-        if (rotX == 1.0f)
-        {
-            rotX = 0.0f;
-            rotY = 1.0f;
-            rotZ = 0.0f;
-        }
-        else if (rotY == 1.0f)
-        {
-            rotX = 0.0f;
-            rotY = 0.0f;
-            rotZ = 1.0f;
-        }
-        else if (rotZ == 1.0f)
-        {
-            rotX = 1.0f;
-            rotY = 0.0f;
-            rotZ = 0.0f;
-        }
-    }
     }
 }
 
@@ -520,139 +642,90 @@ void special(int key, int x, int y)
     {
 
     case GLUT_KEY_LEFT:
-        if (!RIGHT)
+        if (!RIGHT && !DIRECTION_CHANGED)
         {
             LEFT = true;
             RIGHT = false;
             UP = false;
             DOWN = false;
+            DIRECTION_CHANGED = true;
         }
 
         break;
 
     case GLUT_KEY_RIGHT:
-        if (!LEFT)
+        if (!LEFT && !DIRECTION_CHANGED)
         {
             LEFT = false;
             RIGHT = true;
             UP = false;
             DOWN = false;
+            DIRECTION_CHANGED = true;
         }
         break;
 
     case GLUT_KEY_UP:
-        if (!DOWN)
+        if (!DOWN && !DIRECTION_CHANGED)
         {
             LEFT = false;
             RIGHT = false;
             UP = true;
             DOWN = false;
+            DIRECTION_CHANGED = true;
         }
         break;
 
     case GLUT_KEY_DOWN:
-        if (!UP)
+        if (!UP && !DIRECTION_CHANGED)
         {
             LEFT = false;
             RIGHT = false;
             UP = false;
             DOWN = true;
+            DIRECTION_CHANGED = true;
         }
         break;
     }
-}
-
-void mouse(int button, int state, int x, int y)
-{
-
-    if (button == GLUT_LEFT_BUTTON)
-    {
-        if (state == GLUT_DOWN)
-        {
-            printf("Clicou com o botão esquerdo na Posição  X : %i Y : %i \n", x, y);
-        }
-        else if (state == GLUT_UP)
-        {
-            printf("Soltou Botão esquerdo\n");
-        }
-    }
-    else if (button == GLUT_RIGHT_BUTTON)
-    {
-        if (state == GLUT_DOWN)
-        {
-            printf("Clicou com o botão direito na Posição  X : %i Y : %i \n", x, y);
-        }
-        else if (state == GLUT_UP)
-        {
-            printf("Soltou Botão direito\n");
-        }
-    }
-    else if (button == GLUT_MIDDLE_BUTTON)
-    {
-        if (state == GLUT_DOWN)
-        {
-            printf("Clicou com o botão do meio na Posição  X : %i Y : %i \n", x, y);
-        }
-        else if (state == GLUT_UP)
-        {
-            printf("Soltou Botão do meio\n");
-        }
-    }
-}
-
-void MovimentoMouse(int x, int y)
-{
-    printf("Mouse na Posição  X : %i Y : %i \n", x, y);
 }
 
 void init(void)
 {
     glOrtho(0, 500, 0, 500, -1, 1);
     glShadeModel(GL_FLAT);
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-
-    // glutTimerFunc(DELAY, cobraCounter, 1);
+    glClearColor(0.0f, 0.5f, 0.0f, 1.0f);
 }
-
-// void textura()
-// {
-//     glutMainLoop();
-// }
 
 int main(int argc, char **argv)
 {
 
-    // for (int i = 0; i < 2499; i++)
-    // {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
-    glutInitWindowSize(500, 500);
+    glutInitWindowSize(500, 560);
     glutInitWindowPosition(100, 100);
     glutCreateWindow("Snake 2d- André");
+    STAGE = WALLS;
+
     init();
 
     texid1 = carregaTextura();
 
     glutDisplayFunc(display);
-    // glutIdleFunc(display);
     glutReshapeFunc(reshape);
-    // glutMouseFunc(mouse);
-    // glutPassiveMotionFunc(MovimentoMouse);
+
     glutKeyboardFunc(keyboard);
     glutSpecialFunc(special);
+
     glutTimerFunc(DELAY, cobraCounter, 1);
 
-    // printf("%lu   ", sizeof(CobraUnit));
-
-    //   glutDisplayFunc(display);
-    //   glutReshapeFunc(reshape);
-    // glutKeyboardFunc(keyboard);
-    // glutSpecialFunc(SpecialKeys);
-
-    // glutIdleFunc(cobraCounter);
-    // glutTimerFunc(DELAY, cobraCounter, 1);
-
-    // glutMouseFunc(mouse);
     glutMainLoop();
     return 0;
+}
+
+void desenhaTextoBmp(int x, int y, void *fonte,
+
+                     char *string)
+{
+    glRasterPos2f(x, y);
+    while (*string)
+        glutBitmapCharacter(fonte, *string++);
 }
