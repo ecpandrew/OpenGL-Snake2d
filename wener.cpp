@@ -1,7 +1,9 @@
 #include <GL/freeglut.h>
 #include <stdio.h>
 #include <sstream>
-
+#include </home/andrew/cgraf/p3/irrklang/include/irrKlang.h>
+using namespace irrklang;
+#pragma comment(lib, "irrKlang.lib") // link with irrKlang.dll
 //Para maiores informações, ver documentação
 //http://docs.gl/gl3/
 
@@ -110,6 +112,7 @@ static int iSPEED1 = 25;
 static int iSPEED2 = 30;
 static int iSPEED3 = 35;
 static int iINSANE = 40;
+static bool MUSIC = true;
 
 int module(int valor);
 int module(int valor)
@@ -139,6 +142,8 @@ typedef enum
 static Stage STAGE;
 
 char stage[20];
+
+ISoundEngine *engine;
 
 static bool IS_THERE_FOOD = true;
 static bool IS_THERE_BIG_FOOD = true;
@@ -357,14 +362,17 @@ void foodColision()
     if (collisionX && collisionY)
     { // colision
         printf("\nFOOD ATED\n");
-
+        engine->play2D("bite2.wav"); // play some mp3 file
         addUnitToCobra();
         IS_THERE_FOOD = false;
     }
     if (poisonCollisionX && poisonCollisionY)
     { // colision
-        stopGame();
-        printf("poison colision");
+        if (LEVEL >= iPOISON)
+        {
+            stopGame();
+            printf("poison colision");
+        }
     }
 }
 
@@ -704,11 +712,11 @@ int main(int argc, char **argv)
     glutInitWindowPosition(100, 100);
     glutCreateWindow("Snake 2d- André");
     STAGE = WALLS;
+    engine = createIrrKlangDevice();
 
     init();
-
+    // engine->play2D("loop.ogg", true);
     texid1 = carregaTextura();
-
     glutDisplayFunc(display);
     glutReshapeFunc(reshape);
 
