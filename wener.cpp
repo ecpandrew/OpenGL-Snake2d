@@ -716,6 +716,8 @@ int main(int argc, char **argv)
 
     init();
     // engine->play2D("loop.ogg", true);
+    engine->play3D("loop.ogg",
+                   vec3df(0, 0, 10), true, false, true);
     texid1 = carregaTextura();
     glutDisplayFunc(display);
     glutReshapeFunc(reshape);
