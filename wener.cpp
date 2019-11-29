@@ -54,44 +54,19 @@ int CobraUnit::getSize()
     return size;
 }
 
-CobraUnit generateCobraUnit(int x, int y);
 static int size_default = 10;
 static int step = 12;
 static bool ENDGAME = false;
+
 GLuint texid1;
-
-CobraUnit generateCobraUnit(int x, int y)
-{
-    CobraUnit auxcobra;
-
-    auxcobra.setPosicaoX(x);
-    auxcobra.setPosicaoY(y);
-    auxcobra.setSize(size_default);
-    return auxcobra;
-}
-
-// void init(void);
-// void display(void);
-
-void drawCobra();
-void drawFood();
-// void reshape(int w, int h);
-
-void wallColision();
-void foodColision();
-void cobraColision();
-void handleColision();
-void stopGame();
-
-void colocaImagem();
-GLuint carregaTextura();
-char *carrega_bmp();
-
 static GLfloat spin = 0.0;
 int w, h, window, fim = 0;
 
-static int head_x = 250;
-static int head_y = 250;
+static int head_x = 400;
+static int head_y = 400;
+
+static int head_x_BOT = 100;
+static int head_y_BOT = 100;
 
 static int food_x = rand() % 498 + 1;
 static int food_y = rand() % 498 + 1;
@@ -102,9 +77,12 @@ static int poison_y = rand() % 498 + 1;
 static int big_food_x = rand() % 498 + 1;
 static int big_food_y = rand() % 498 + 1;
 
-static int LEVEL = 1;
-static int DELAY = 40;
+static int STAGE_LEVEL = 1;
 
+static int BOT_LEVEL = 1;
+static int COBRA_LEVEL = 1;
+
+static int DELAY = 40;
 static int iCHILD = 10;
 static int iWALLS = 15;
 static int iPOISON = 20;
@@ -113,19 +91,6 @@ static int iSPEED2 = 30;
 static int iSPEED3 = 35;
 static int iINSANE = 40;
 static bool MUSIC = true;
-
-int module(int valor);
-int module(int valor)
-{
-    if (valor < 0)
-    {
-        return -valor;
-    }
-    else
-    {
-        return valor;
-    }
-}
 
 typedef enum
 {
@@ -138,86 +103,121 @@ typedef enum
     INSANE
 
 } Stage;
-
 static Stage STAGE;
 
 char stage[20];
-
 ISoundEngine *engine;
 
 static bool IS_THERE_FOOD = true;
 static bool IS_THERE_BIG_FOOD = true;
+
 static bool DIRECTION_CHANGED = false;
+static bool DIRECTION_CHANGED_BOT = false;
 
 static bool LEFT = false;
 static bool RIGHT = false;
 static bool UP = false;
 static bool DOWN = false;
 
+static bool LEFT_BOT = true;
+static bool RIGHT_BOT = false;
+static bool UP_BOT = false;
+static bool DOWN_BOT = false;
+
 static float r = 1;
 static float g = 0;
 static float b = 0;
+static CobraUnit cobra[2500];    // = {head, body1, body2, body3, body4, body5};
+static CobraUnit cobraBot[2500]; // = {head, body1, body2, body3, body4, body5};
 
-// static CobraUnit head = generateCobraUnit(head_x, head_y);
-// static CobraUnit body1 = generateCobraUnit(250 + 10, 250);
-// static CobraUnit body2 = generateCobraUnit(250 + 20, 250);
-// static CobraUnit body3 = generateCobraUnit(250 + 30, 250);
-// static CobraUnit body4 = generateCobraUnit(250 + 40, 250);
-// static CobraUnit body5 = generateCobraUnit(250 + 50, 250);
-static CobraUnit cobra[2500]; // = {head, body1, body2, body3, body4, body5};
-
-// void mouse(int button, int state, int x, int y);
+CobraUnit generateCobraUnit(int x, int y);
+void drawCobra();
+void drawFood();
+void wallColision();
+void foodColision();
+void cobraColision();
+void handleColision();
+void stopGame();
+void colocaImagem();
+GLuint carregaTextura();
+char *carrega_bmp();
 void desenhaTextoBmp(int x, int y, void *fonte, char *string);
+void cobraCounter(int value);
+void addUnitToCobra(bool bot);
+void keyboard(unsigned char key, int x, int y);
+void SpecialKeys(int key, int x, int y);
+int module(int valor);
+void botThink();
 
-void addUnitToCobra();
-
-void addUnitToCobra()
+int module(int valor)
 {
-    //     if(UP || DOWN ){
-    //         CobraUnit piece = generateCobraUnit(0,0);
-    //         piece.setPosicaoX(cobra[LEVEL-1].getPosicaoX()-10);
-    //         piece.setPosicaoX();
-    cobra[LEVEL] = generateCobraUnit(head_x + 1000, head_y);
+    if (valor < 0)
+    {
+        return -valor;
+    }
+    else
+    {
+        return valor;
+    }
+}
 
-    // }else{
+CobraUnit generateCobraUnit(int x, int y)
+{
+    CobraUnit auxcobra;
+    auxcobra.setPosicaoX(x);
+    auxcobra.setPosicaoY(y);
+    auxcobra.setSize(size_default);
+    return auxcobra;
+}
 
-    // }
-    LEVEL++;
-    if (LEVEL == 2)
+void addUnitToCobra(bool bot)
+{
+    if (bot)
+    {
+        cobraBot[BOT_LEVEL] = generateCobraUnit(head_x_BOT + 1000, head_y_BOT);
+        BOT_LEVEL++;
+    }
+    else
+    {
+        cobra[COBRA_LEVEL] = generateCobraUnit(head_x + 1000, head_y);
+        COBRA_LEVEL++;
+    }
+    // LEVEL++;
+
+    if (STAGE_LEVEL == 2)
     {
         STAGE = CHILD;
     }
-    else if (LEVEL == iWALLS)
+    else if (STAGE_LEVEL == iWALLS)
     {
         STAGE = WALLS;
     }
-    else if (LEVEL == iPOISON)
+    else if (STAGE_LEVEL == iPOISON)
     {
         STAGE = POISON;
     }
-    else if (LEVEL == iSPEED1)
+    else if (STAGE_LEVEL == iSPEED1)
     {
         STAGE = SPEED1;
         DELAY = 35;
     }
-    else if (LEVEL == iSPEED2)
+    else if (STAGE_LEVEL == iSPEED2)
     {
         STAGE = SPEED2;
         DELAY = 30;
     }
-    else if (LEVEL == iSPEED3)
+    else if (STAGE_LEVEL == iSPEED3)
     {
         STAGE = SPEED3;
         DELAY = 25;
     }
-    else if (LEVEL > iINSANE)
+    else if (STAGE_LEVEL > iINSANE)
     {
         STAGE = INSANE;
         DELAY = 23;
     }
 }
-void keyboard(unsigned char key, int x, int y);
-void SpecialKeys(int key, int x, int y);
+
 void stopGame()
 {
     printf("\n\nGame stopped\n\n");
@@ -226,18 +226,22 @@ void stopGame()
     RIGHT = false;
     UP = false;
     DOWN = false;
-    head_x = 250;
-    head_y = 250;
-    LEVEL = 1;
+    head_x = 400;
+    head_y = 400;
+    head_x_BOT = 100;
+    head_y_BOT = 100;
+    STAGE_LEVEL = 1;
+    COBRA_LEVEL = 1;
+    BOT_LEVEL = 1;
     STAGE = CHILD;
     DELAY = 40;
 }
+
 void wallColision()
 {
     if (head_x >= 500) // direita
     {
-
-        if (LEVEL > iWALLS)
+        if (STAGE_LEVEL > iWALLS)
         {
             stopGame();
             printf("wall 1");
@@ -249,7 +253,7 @@ void wallColision()
     }
     else if (head_x + 10 <= 0) // direita
     {
-        if (LEVEL >= iWALLS)
+        if (STAGE_LEVEL >= iWALLS)
         {
             stopGame();
             printf("wall 2");
@@ -258,12 +262,10 @@ void wallColision()
         {
             head_x = 500;
         }
-        // stopGame();
     }
-
     if (head_y >= 500)
     {
-        if (LEVEL >= iWALLS)
+        if (STAGE_LEVEL >= iWALLS)
         {
             stopGame();
             printf("wall 3");
@@ -272,11 +274,10 @@ void wallColision()
         {
             head_y = 0;
         }
-        // stopGame();
     }
     else if (head_y + 10 <= 0)
     {
-        if (LEVEL >= iWALLS)
+        if (STAGE_LEVEL >= iWALLS)
         {
             stopGame();
             printf("wall 4");
@@ -285,18 +286,15 @@ void wallColision()
         {
             head_y = 500 - 10;
         }
-        // stopGame();
     }
 }
 
 void drawFood()
 {
-
     glColor3f(1, 0, 0);
     glRecti(food_x, food_y, food_x + 10, food_y + 10);
-    if (LEVEL >= iPOISON)
+    if (STAGE_LEVEL >= iPOISON)
     {
-
         glColor3f(1, 0, 1);
         glRecti(poison_x, poison_y, poison_x + 10, poison_y + 10);
     }
@@ -306,7 +304,7 @@ void cobraColision()
 {
     int aux_x, aux_y, i;
 
-    for (i = 1; i < LEVEL; i++)
+    for (i = 1; i < COBRA_LEVEL; i++)
     {
         aux_x = cobra[i].getPosicaoX();
         aux_y = cobra[i].getPosicaoY();
@@ -326,7 +324,6 @@ void cobraColision()
 
 void foodColision()
 {
-
     if (!IS_THERE_FOOD)
     {
         food_x = rand() % 497;
@@ -353,6 +350,12 @@ void foodColision()
     bool collisionY = head_y + size_default >= food_y &&
                       food_y + size_default >= head_y;
 
+    bool collisionX_BOT = head_x_BOT + size_default >= food_x &&
+                          food_x + size_default >= head_x_BOT;
+    // Collision y-axis?
+    bool collisionY_BOT = head_y_BOT + size_default >= food_y &&
+                          food_y + size_default >= head_y_BOT;
+
     bool poisonCollisionX = head_x + size_default >= poison_x &&
                             poison_x + size_default >= head_x;
     // Collision y-axis?
@@ -363,12 +366,22 @@ void foodColision()
     { // colision
         printf("\nFOOD ATED\n");
         engine->play2D("bite2.wav"); // play some mp3 file
-        addUnitToCobra();
+        addUnitToCobra(false);
         IS_THERE_FOOD = false;
+        STAGE_LEVEL++;
     }
+    else if (collisionX_BOT && collisionY_BOT)
+    { // colision
+        printf("\nFOOD ATED by bot\n");
+        engine->play2D("bite2.wav"); // play some mp3 file
+        addUnitToCobra(true);
+        IS_THERE_FOOD = false;
+        STAGE_LEVEL++;
+    }
+
     if (poisonCollisionX && poisonCollisionY)
     { // colision
-        if (LEVEL >= iPOISON)
+        if (STAGE_LEVEL >= iPOISON)
         {
             stopGame();
             printf("poison colision");
@@ -387,7 +400,7 @@ void drawCobra()
 
     int i, j = 0;
 
-    for (i = 0; i < LEVEL; i++)
+    for (i = 0; i < COBRA_LEVEL; i++)
     {
 
         int x = cobra[i].getPosicaoX();
@@ -405,10 +418,34 @@ void drawCobra()
         // glFlush();
     }
 }
-void cobraCounter(int value);
+
+void drawBot();
+void drawBot()
+{
+    int i, j = 0;
+
+    for (i = 0; i < BOT_LEVEL; i++)
+    {
+
+        int x = cobraBot[i].getPosicaoX();
+        int y = cobraBot[i].getPosicaoY();
+
+        int s = cobraBot[i].getSize();
+
+        glColor3f(1, 1, 0);
+
+        glRecti(x, y, x + s, y + s);
+        // glColor3f(1, 1, 1);e
+
+        // glEnd();
+
+        // glFlush();
+    }
+}
 
 void cobraCounter(int value)
 {
+    botThink();
     // sleep(0.5);
     if (LEFT)
     {
@@ -430,16 +467,39 @@ void cobraCounter(int value)
         head_y -= step;
         DIRECTION_CHANGED = false;
     }
-    if (LEVEL == 1)
-    {
-        addUnitToCobra();
-        IS_THERE_FOOD = false;
-    }
-    printf("LEVEL: %i ;Cobra andou  X : %i Y : %i \n", LEVEL, head_x, head_y);
 
+    if (UP_BOT)
+    {
+        head_y_BOT += step;
+        DIRECTION_CHANGED_BOT = false;
+    }
+    else if (DOWN_BOT)
+    {
+        head_y_BOT -= step;
+        DIRECTION_CHANGED_BOT = false;
+    }
+    else if (LEFT_BOT)
+    {
+        head_x_BOT -= step;
+        DIRECTION_CHANGED_BOT = false;
+    }
+    else if (RIGHT_BOT)
+    {
+        head_x_BOT += step;
+        DIRECTION_CHANGED_BOT = false;
+    }
+
+    if (STAGE_LEVEL == 1)
+    {
+        addUnitToCobra(false);
+        addUnitToCobra(true);
+        IS_THERE_FOOD = false;
+        STAGE_LEVEL++;
+    }
+    printf("LEVEL: %i ;Cobra andou  X : %i Y : %i \n", STAGE_LEVEL, head_x_BOT, head_y_BOT);
     handleColision();
 
-    for (int i = LEVEL; i > 0; i--)
+    for (int i = COBRA_LEVEL; i > 0; i--)
     {
 
         if (i == 1)
@@ -462,11 +522,32 @@ void cobraCounter(int value)
         }
     }
 
+    for (int i = BOT_LEVEL; i > 0; i--)
+    {
+
+        if (i == 1)
+        {
+            cobraBot[0].setPosicaoX(head_x_BOT);
+            cobraBot[0].setPosicaoY(head_y_BOT);
+        }
+
+        if (i == 0)
+        {
+            continue;
+        }
+        else
+        {
+            int aux_x = cobraBot[i - 1].getPosicaoX();
+            int aux_y = cobraBot[i - 1].getPosicaoY();
+
+            cobraBot[i].setPosicaoX(aux_x);
+            cobraBot[i].setPosicaoY(aux_y);
+        }
+    }
     glutPostRedisplay();
     glutTimerFunc(DELAY, cobraCounter, 1);
 }
 
-//Para maiores informações sobre a estrutura de um arquivo bmp, ver "http://easygrid.ic.uff.br/~aconci/curso/bmp.pdf"
 char *carrega_bmp()
 {
     FILE *f = fopen("solo.bmp", "rb");
@@ -527,7 +608,6 @@ void display(void)
     colocaImagem();
     glClear(GL_COLOR_BUFFER_BIT);
     glLoadIdentity();
-
     glColor3f(1, 1, 1);
     glBegin(GL_QUADS);
     glTexCoord3f(0, 0, 0);
@@ -539,25 +619,16 @@ void display(void)
     glTexCoord3f(1, 0, 0);
     glVertex3f(500, 0, 0);
     glEnd(); // angulo += velocidade;
-
-    // glColor3f(1, 0, 0);
     glDisable(GL_TEXTURE_2D);
-    // glRecti(250, 250, 250 + 10, 250 + 10);
     drawFood();
     drawCobra();
-    // glFlush();
-
-    // String::number("%1", levelString);
-    // levelString = (char *)"Level: " + char(LEVEL);
-
+    drawBot();
     char str[10];
-    sprintf(str, "%d", LEVEL - 1);
+    sprintf(str, "%d", STAGE_LEVEL - 1);
     desenhaTextoBmp(10, 530, GLUT_BITMAP_TIMES_ROMAN_24, (char *)"Level: ");
     desenhaTextoBmp(85, 530, GLUT_BITMAP_TIMES_ROMAN_24, str);
-
     desenhaTextoBmp(250, 530, GLUT_BITMAP_TIMES_ROMAN_24, (char *)"Stage: ");
-
-    if (LEVEL >= iWALLS)
+    if (STAGE_LEVEL >= iWALLS)
     {
         glColor3f(0, 0, 1);
         glBegin(GL_LINE_STRIP);
@@ -598,11 +669,9 @@ void display(void)
         glColor3f(0, 0, 0);
         desenhaTextoBmp(320, 530, GLUT_BITMAP_TIMES_ROMAN_24, (char *)"INSANE");
         break;
-
     default:
         break;
     }
-
     glutSwapBuffers();
 }
 
@@ -611,25 +680,10 @@ void reshape(int w, int h)
     glViewport(0, 0, (GLsizei)w, (GLsizei)h);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    // glOrtho(-50.0, 50.0, -50.0, 50.0 , -1.0, 1.0);
-
     glOrtho(0, 500, 0, 560, -1, 1);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 }
-
-// void reshape(int w, int h)
-// {
-//     // Função é chamada caso a tela tenha sido alterada
-//     if (h == 0)
-//         h = 1;
-//     float proporsao = w * 1.0 / h;
-//     glMatrixMode(GL_PROJECTION);
-//     glLoadIdentity();
-//     glViewport(0, 0, w, h);
-//     gluPerspective(45.0f, proporsao, 0.1f, 100.0f);
-//     glMatrixMode(GL_MODELVIEW);
-// }
 
 void keyboard(unsigned char key, int x, int y)
 {
@@ -646,6 +700,7 @@ void keyboard(unsigned char key, int x, int y)
 
 void special(int key, int x, int y)
 {
+
     switch (key)
     {
 
@@ -731,11 +786,160 @@ int main(int argc, char **argv)
     return 0;
 }
 
-void desenhaTextoBmp(int x, int y, void *fonte,
-
-                     char *string)
+void desenhaTextoBmp(int x, int y, void *fonte, char *string)
 {
     glRasterPos2f(x, y);
     while (*string)
         glutBitmapCharacter(fonte, *string++);
+}
+
+void botThink()
+{
+    int dx = head_x_BOT - food_x;
+    int dy = head_y_BOT - food_y;
+
+    bool collisionY = head_y_BOT + size_default >= food_y &&
+                      food_y + size_default >= head_y_BOT;
+
+    bool collisionX = head_x_BOT + size_default >= food_x &&
+                      food_x + size_default >= head_x_BOT;
+
+    printf("\ny col %s", collisionY ? "true" : "false");
+    printf("\nx col %s", collisionX ? "true" : "false");
+    printf("\ndy %i", dy);
+
+    if(dy >= 0 && dx <=0 ){
+
+        if(collisionY){
+            LEFT_BOT = false;
+            RIGHT_BOT = true;
+            UP_BOT = false;
+            DOWN_BOT = false;
+            DIRECTION_CHANGED_BOT = true;
+        }else{
+            LEFT_BOT = false;
+            RIGHT_BOT = false;
+            UP_BOT = false;
+            DOWN_BOT = true;
+            DIRECTION_CHANGED_BOT = true;
+        }
+    
+    }else if(dy >= 0 && dx >= 0 ){
+
+        if(collisionY){
+            LEFT_BOT = true;
+            RIGHT_BOT = false;
+            UP_BOT = false;
+            DOWN_BOT = false;
+            DIRECTION_CHANGED_BOT = true;
+        }else{
+            LEFT_BOT = false;
+            RIGHT_BOT = false;
+            UP_BOT = false;
+            DOWN_BOT = true;
+            DIRECTION_CHANGED_BOT = true;
+        }
+    
+    }if(dy <= 0 && dx <=0 ){
+
+        if(collisionY){
+            LEFT_BOT = false;
+            RIGHT_BOT = true;
+            UP_BOT = false;
+            DOWN_BOT = false;
+            DIRECTION_CHANGED_BOT = true;
+        }else{
+            LEFT_BOT = false;
+            RIGHT_BOT = false;
+            UP_BOT = true;
+            DOWN_BOT = false;
+            DIRECTION_CHANGED_BOT = true;
+        }
+    
+    }if(dy <= 0 && dx >=0 ){
+
+        if(collisionY){
+            LEFT_BOT = true;
+            RIGHT_BOT = false;
+            UP_BOT = false;
+            DOWN_BOT = false;
+            DIRECTION_CHANGED_BOT = true;
+        }else{
+            LEFT_BOT = false;
+            RIGHT_BOT = false;
+            UP_BOT = true;
+            DOWN_BOT = false;
+            DIRECTION_CHANGED_BOT = true;
+        }
+    
+    }
+    
+
+
+
+    // if (dy >= 0)
+    // {
+    //     if ((collisionY && dx < 0) || (collisionX))
+    //     {
+
+    //         LEFT_BOT = false;
+    //         RIGHT_BOT = true;
+    //         UP_BOT = false;
+    //         DOWN_BOT = false;
+    //         DIRECTION_CHANGED_BOT = true;
+    //     }
+    //     else
+    //     {
+    //         LEFT_BOT = false;
+    //         RIGHT_BOT = false;
+    //         UP_BOT = false;
+    //         DOWN_BOT = true;
+    //         DIRECTION_CHANGED_BOT = true;
+    //     }
+    // }
+    // else if (dy < 0)
+    // {
+    //     if ((collisionY && dx > 0) || (collisionX))
+    //     {
+
+    //         LEFT_BOT = true;
+    //         RIGHT_BOT = false;
+    //         UP_BOT = false;
+    //         DOWN_BOT = false;
+    //         DIRECTION_CHANGED_BOT = true;
+    //     }
+    //     else
+    //     {
+    //         LEFT_BOT = false;
+    //         RIGHT_BOT = false;
+    //         UP_BOT = true;
+    //         DOWN_BOT = false;
+    //         DIRECTION_CHANGED_BOT = true;
+    //     }
+    // }
+
+    // else if (dx < 0 && dy < 0)
+    // {
+    //     LEFT_BOT = false;
+    //     RIGHT_BOT = false;
+    //     UP_BOT = true;
+    //     DOWN_BOT = false;
+    //     DIRECTION_CHANGED_BOT = true;
+    // }
+    // else if (dx < 0 && dy > 0)
+    // {
+    //     LEFT_BOT = false;
+    //     RIGHT_BOT = false;
+    //     UP_BOT = false;
+    //     DOWN_BOT = true;
+    //     DIRECTION_CHANGED_BOT = true;
+    // }
+    // else
+    // {
+    //     LEFT_BOT = true;
+    //     RIGHT_BOT = false;
+    //     UP_BOT = false;
+    //     DOWN_BOT = true;
+    //     DIRECTION_CHANGED_BOT = true;
+    // }
 }
