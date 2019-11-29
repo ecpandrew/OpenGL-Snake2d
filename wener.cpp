@@ -113,6 +113,7 @@ static bool IS_THERE_BIG_FOOD = true;
 
 static bool DIRECTION_CHANGED = false;
 static bool DIRECTION_CHANGED_BOT = false;
+static bool BOT_IS_ON = false;
 
 static bool LEFT = false;
 static bool RIGHT = false;
@@ -140,6 +141,7 @@ void handleColision();
 void stopGame();
 void colocaImagem();
 GLuint carregaTextura();
+
 char *carrega_bmp();
 void desenhaTextoBmp(int x, int y, void *fonte, char *string);
 void cobraCounter(int value);
@@ -148,6 +150,15 @@ void keyboard(unsigned char key, int x, int y);
 void SpecialKeys(int key, int x, int y);
 int module(int valor);
 void botThink();
+
+void sendBotAway();
+
+void sendBotAway()
+{
+
+    head_x_BOT = 700;
+    head_y_BOT = 800;
+}
 
 int module(int valor)
 {
@@ -174,8 +185,11 @@ void addUnitToCobra(bool bot)
 {
     if (bot)
     {
-        cobraBot[BOT_LEVEL] = generateCobraUnit(head_x_BOT + 1000, head_y_BOT);
-        BOT_LEVEL++;
+        if (BOT_LEVEL <= 3)
+        {
+            cobraBot[BOT_LEVEL] = generateCobraUnit(head_x_BOT + 1000, head_y_BOT);
+            BOT_LEVEL++;
+        }
     }
     else
     {
@@ -195,6 +209,7 @@ void addUnitToCobra(bool bot)
     else if (STAGE_LEVEL == iPOISON)
     {
         STAGE = POISON;
+        BOT_IS_ON = true;
     }
     else if (STAGE_LEVEL == iSPEED1)
     {
@@ -234,6 +249,7 @@ void stopGame()
     COBRA_LEVEL = 1;
     BOT_LEVEL = 1;
     STAGE = CHILD;
+    BOT_IS_ON = false;
     DELAY = 40;
 }
 
@@ -320,6 +336,42 @@ void cobraColision()
             printf("cobra colision");
         }
     }
+    for (i = 1; i < BOT_LEVEL; i++)
+    {
+        aux_x = cobraBot[i].getPosicaoX();
+        aux_y = cobraBot[i].getPosicaoY();
+
+        bool collisionX = head_x + size_default >= aux_x &&
+                          aux_x + size_default >= head_x;
+        bool collisionY = head_y + size_default >= aux_y &&
+                          aux_y + size_default >= head_y;
+
+        if (collisionX && collisionY && BOT_IS_ON)
+        { // colision
+            stopGame();
+            printf("cobra colision by bot");
+        }
+    }
+
+    if (BOT_IS_ON)
+    {
+        for (i = 0; i < COBRA_LEVEL; i++)
+        {
+            aux_x = cobra[i].getPosicaoX();
+            aux_y = cobra[i].getPosicaoY();
+            bool collisionX = head_x_BOT + size_default >= aux_x &&
+                              aux_x + size_default >= head_x_BOT;
+            bool collisionY = head_y_BOT + size_default >= aux_y &&
+                              aux_y + size_default >= head_y_BOT;
+
+            if (collisionX && collisionY)
+            { // colision
+                // stopGame();
+                sendBotAway();
+                printf("cobraBot died colision");
+            }
+        }
+    }
 }
 
 void foodColision()
@@ -370,7 +422,8 @@ void foodColision()
         IS_THERE_FOOD = false;
         STAGE_LEVEL++;
     }
-    else if (collisionX_BOT && collisionY_BOT)
+
+    else if (collisionX_BOT && collisionY_BOT && BOT_IS_ON)
     { // colision
         printf("\nFOOD ATED by bot\n");
         engine->play2D("bite2.wav"); // play some mp3 file
@@ -622,7 +675,11 @@ void display(void)
     glDisable(GL_TEXTURE_2D);
     drawFood();
     drawCobra();
-    drawBot();
+    if (BOT_IS_ON)
+    {
+        drawBot();
+    }
+
     char str[10];
     sprintf(str, "%d", STAGE_LEVEL - 1);
     desenhaTextoBmp(10, 530, GLUT_BITMAP_TIMES_ROMAN_24, (char *)"Level: ");
@@ -808,74 +865,86 @@ void botThink()
     printf("\nx col %s", collisionX ? "true" : "false");
     printf("\ndy %i", dy);
 
-    if(dy >= 0 && dx <=0 ){
+    if (dy >= 0 && dx <= 0)
+    {
 
-        if(collisionY){
+        if (collisionY)
+        {
             LEFT_BOT = false;
             RIGHT_BOT = true;
             UP_BOT = false;
             DOWN_BOT = false;
             DIRECTION_CHANGED_BOT = true;
-        }else{
+        }
+        else
+        {
             LEFT_BOT = false;
             RIGHT_BOT = false;
             UP_BOT = false;
             DOWN_BOT = true;
             DIRECTION_CHANGED_BOT = true;
         }
-    
-    }else if(dy >= 0 && dx >= 0 ){
-
-        if(collisionY){
-            LEFT_BOT = true;
-            RIGHT_BOT = false;
-            UP_BOT = false;
-            DOWN_BOT = false;
-            DIRECTION_CHANGED_BOT = true;
-        }else{
-            LEFT_BOT = false;
-            RIGHT_BOT = false;
-            UP_BOT = false;
-            DOWN_BOT = true;
-            DIRECTION_CHANGED_BOT = true;
-        }
-    
-    }if(dy <= 0 && dx <=0 ){
-
-        if(collisionY){
-            LEFT_BOT = false;
-            RIGHT_BOT = true;
-            UP_BOT = false;
-            DOWN_BOT = false;
-            DIRECTION_CHANGED_BOT = true;
-        }else{
-            LEFT_BOT = false;
-            RIGHT_BOT = false;
-            UP_BOT = true;
-            DOWN_BOT = false;
-            DIRECTION_CHANGED_BOT = true;
-        }
-    
-    }if(dy <= 0 && dx >=0 ){
-
-        if(collisionY){
-            LEFT_BOT = true;
-            RIGHT_BOT = false;
-            UP_BOT = false;
-            DOWN_BOT = false;
-            DIRECTION_CHANGED_BOT = true;
-        }else{
-            LEFT_BOT = false;
-            RIGHT_BOT = false;
-            UP_BOT = true;
-            DOWN_BOT = false;
-            DIRECTION_CHANGED_BOT = true;
-        }
-    
     }
-    
+    else if (dy >= 0 && dx >= 0)
+    {
 
+        if (collisionY)
+        {
+            LEFT_BOT = true;
+            RIGHT_BOT = false;
+            UP_BOT = false;
+            DOWN_BOT = false;
+            DIRECTION_CHANGED_BOT = true;
+        }
+        else
+        {
+            LEFT_BOT = false;
+            RIGHT_BOT = false;
+            UP_BOT = false;
+            DOWN_BOT = true;
+            DIRECTION_CHANGED_BOT = true;
+        }
+    }
+    if (dy <= 0 && dx <= 0)
+    {
 
+        if (collisionY)
+        {
+            LEFT_BOT = false;
+            RIGHT_BOT = true;
+            UP_BOT = false;
+            DOWN_BOT = false;
+            DIRECTION_CHANGED_BOT = true;
+        }
+        else
+        {
+            LEFT_BOT = false;
+            RIGHT_BOT = false;
+            UP_BOT = true;
+            DOWN_BOT = false;
+            DIRECTION_CHANGED_BOT = true;
+        }
+    }
+    if (dy <= 0 && dx >= 0)
+    {
+
+        if (collisionY)
+        {
+            LEFT_BOT = true;
+            RIGHT_BOT = false;
+            UP_BOT = false;
+            DOWN_BOT = false;
+            DIRECTION_CHANGED_BOT = true;
+        }
+        else
+        {
+            LEFT_BOT = false;
+            RIGHT_BOT = false;
+            UP_BOT = true;
+            DOWN_BOT = false;
+            DIRECTION_CHANGED_BOT = true;
+        }
+    }
 
     // if (dy >= 0)
     // {
